@@ -1,0 +1,4 @@
+__pycache__/
+*.pyc
+amazon_ecommerce_1M.csv
+.ipynb_checkpoints/
