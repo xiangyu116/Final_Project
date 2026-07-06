@@ -12,6 +12,10 @@ def main():
     # 1. generate dataset
     X, true_labels = generate_simple_data(n=300, k=3, dim=2)
 
+
+    ##3D/nd
+    #X, true_labels = generate_simple_data(n=300, k=3, dim=3)
+
     labels= MyDBSCAN(D=X, eps=1.5, MinPts=5)
 
 

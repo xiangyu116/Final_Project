@@ -23,6 +23,8 @@ import numpy as np
 #     plt.title(title)
 #     plt.show()
 
+
+###DBscan plot
 def plot_dbscan(X, labels):
     plt.figure(figsize=(6,6))
 
