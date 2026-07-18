@@ -3,6 +3,7 @@
 #include <iostream>
 #include <vector>
 #include <cmath>
+#include <omp.h>
 
 #include <set>
 
@@ -115,37 +116,85 @@ void growCluster(const Dataset& D,std::vector<int>& labels,int P,std::vector<int
 
 
 // Find all points within eps of point P
+// std::vector<int> regionQuery(const Dataset& D,int P,double eps) 
+// {
+//     std::vector<int> neighbors;
+
+//     int n = static_cast<int>(D.size());
+//     int dimensions = static_cast<int>(D[P].size());
+
+//     // Compare point P with every point Pn
+//     for (int Pn = 0; Pn < n; Pn++) {
+
+//         double squaredDistance = 0.0;
+
+//         // Calculate squared Euclidean distance
+//         for (int d = 0; d < dimensions; d++) 
+//         {
+//             double difference = D[P][d] - D[Pn][d];
+//             squaredDistance += difference * difference;
+//         }
+
+//         // Euclidean distance
+//         double distance = std::sqrt(squaredDistance);
+
+//         // Add Pn if it is inside the eps neighborhood
+//         if (distance < eps) 
+//         {
+//             neighbors.push_back(Pn);
+//         }
+//     }
+
+//     return neighbors;
+// }
+
+// omp
 std::vector<int> regionQuery(const Dataset& D,int P,double eps) 
 {
     std::vector<int> neighbors;
 
-    int n = static_cast<int>(D.size());
-    int dimensions = static_cast<int>(D[P].size());
+    int n = D.size();
+    int dimensions =D[P].size();
 
-    // Compare point P with every point Pn
-    for (int Pn = 0; Pn < n; Pn++) {
+    #pragma omp parallel
+    {
+        std::vector<int> local_neighbors;
 
-        double squaredDistance = 0.0;
-
-        // Calculate squared Euclidean distance
-        for (int d = 0; d < dimensions; d++) 
+        #pragma omp for
+        for (int Pn = 0; Pn < n; Pn++) 
         {
-            double difference = D[P][d] - D[Pn][d];
-            squaredDistance += difference * difference;
+            double squaredDistance = 0.0;
+
+            // Calculate squared Euclidean distance
+            for (int d = 0; d < dimensions; d++) 
+            {
+                double difference = D[P][d] - D[Pn][d];
+                squaredDistance += difference * difference;
+            }
+
+            if(std::sqrt(squaredDistance) < eps)
+            {
+                local_neighbors.push_back(Pn);
+            }
         }
 
-        // Euclidean distance
-        double distance = std::sqrt(squaredDistance);
-
-        // Add Pn if it is inside the eps neighborhood
-        if (distance < eps) 
+        #pragma omp critical
         {
-            neighbors.push_back(Pn);
+            neighbors.insert(neighbors.end(),local_neighbors.begin(),local_neighbors.end());
         }
+
+        
     }
-
     return neighbors;
+
 }
+
+
+
+
+
+
+
 
 int getClusterNumber(const std::vector<int>& labels)
 {

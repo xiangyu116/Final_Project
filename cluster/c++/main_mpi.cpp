@@ -40,11 +40,23 @@ int main(int argc,char** argv)
         total_points=data.size();
         dimension=data[0].size();
 
+        // sampletest
+
+        // K=10
         int sample_size=std::min(5000,(int)data.size());
+
+        // K=30
+        //int sample_size=std::min(10000,(int)data.size());
+
+        // K=11
+        //int sample_size=std::min(20000,(int)data.size());
+
+        //Testing explosion
+        //int sample_size=std::min(50000,(int)data.size());
 
         std::vector<std::vector<double>> sample;
         
-        for(int i=0;i<5000;i++)
+        for(int i=0;i<sample_size;i++)
         {
             sample.push_back(data[i]);
         }
