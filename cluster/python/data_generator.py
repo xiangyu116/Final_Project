@@ -143,7 +143,7 @@ class DataDrivenGenerator:
         self.prepare_statistics()
 
     # -------------------------
-    # 1. 学习统计分布
+    # 1. Learning statistical distributions
     # -------------------------
     def prepare_statistics(self):
 
