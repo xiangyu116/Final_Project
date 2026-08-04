@@ -75,3 +75,75 @@ std::vector<std::vector<double>> readCSV(const std::string& filename)
 
     return data;
 }
+
+// sklearn make_blobs reader
+
+std::vector<std::vector<double>> readBlobCSV(const std::string &filename) {
+
+    std::vector<std::vector<double>> data;
+    std::ifstream file(filename);
+    if (!file.is_open()) {
+        std::cout << "Cannot open file\n";
+        return data;
+    }
+
+    std::string line;
+    // remove header
+    getline(file, line);
+    while (getline(file, line)) {
+        std::stringstream ss(line);
+        std::string value;
+        std::vector<double> row;
+        int column = 0;
+        while (getline(ss, value, ',')) {
+
+            if (column < 10) {
+                row.push_back(std::stod(value));
+            }
+            column++;
+        }
+        data.push_back(row);
+    }
+    return data;
+}
+
+std::vector<std::vector<double>> readCovtypeCSV(const std::string &filename) {
+
+    std::vector<std::vector<double>> data;
+
+    std::ifstream file(filename);
+
+    if (!file.is_open()) {
+        std::cout << "Cannot open file\n";
+        return data;
+    }
+
+    std::string line;
+
+    getline(file, line);
+
+    while (getline(file, line)) {
+
+        std::stringstream ss(line);
+
+        std::string value;
+
+        std::vector<double> row;
+
+        int column = 0;
+
+        while (getline(ss, value, ',')) {
+
+            // ignore true_label
+            if (column < 54) {
+                row.push_back(std::stod(value));
+            }
+
+            column++;
+        }
+
+        data.push_back(row);
+    }
+
+    return data;
+}

@@ -1,0 +1,18 @@
+# executable
+*.exe
+
+# generated data
+*.csv
+*.pkl
+
+# results
+50M_Results/
+
+# python cache
+__pycache__/
+
+# vscode
+.vscode/
+
+# notebooks
+*.ipynb

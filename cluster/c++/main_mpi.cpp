@@ -3,10 +3,12 @@
 #include "csv_reader.hpp"
 #include "normalize.hpp"
 
-#include <mpi.h>
-#include <iostream>
-#include <vector>
 #include <algorithm>
+#include <iomanip>
+#include <iostream>
+#include <mpi.h>
+#include <sstream>
+#include <vector>
 
 int main(int argc,char** argv)
 {
@@ -20,31 +22,24 @@ int main(int argc,char** argv)
 
     MPI_Comm_size(MPI_COMM_WORLD,&size);
 
-    std::vector<double> global_X;
     std::vector<std::vector<double>> data;
-
-
-    int total_points=0;
-    int dimension=0;
     int K=0;
 
-
-    //temporary test data
     if(rank==0)
     {
-        
-        data=readCSV("amazon_ecommerce_1M.csv");
+
+        data = readCSV("data/amazon_ecommerce_1M.csv");
 
         normalize(data);
 
-        total_points=data.size();
-        dimension=data[0].size();
+        // sampletest
 
+        // K=10
         int sample_size=std::min(5000,(int)data.size());
 
         std::vector<std::vector<double>> sample;
         
-        for(int i=0;i<5000;i++)
+        for(int i=0;i<sample_size;i++)
         {
             sample.push_back(data[i]);
         }
@@ -68,58 +63,83 @@ int main(int argc,char** argv)
             std::cout<<"DBSCAN failed, use default K="<<K<<std::endl;  
         }
 
-        std::cout<< "DBSCAN found "<< K<< " clusters\n"; 
-
-
-        global_X.resize(total_points*dimension);
-
-        int index=0;
-
-        for(int i=0;i<total_points;i++)
-        {
-            for(int j=0;j<dimension;j++)
-            {
-                global_X[index]=data[i][j];
-                index++;
-            }
-        }
-    
+        std::cout << "DBSCAN found " << K << " clusters\n";
+        data.clear();
+        data.shrink_to_fit();
     }
 
-    MPI_Bcast(&total_points, 1, MPI_INT, 0, MPI_COMM_WORLD);
-    MPI_Bcast(&dimension, 1, MPI_INT, 0, MPI_COMM_WORLD);
-    MPI_Bcast(&K,1,MPI_INT,0,MPI_COMM_WORLD);
+    MPI_Bcast(&K, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
+    double start_time = MPI_Wtime();
 
-    int local_points=total_points/size;
+    std::vector<double> global_mean;
+    std::vector<double> global_std;
 
-    std::vector<double> local_flat(local_points*dimension);
+    // MiniBatchKMeansMPI model(K, 10000, 1, 1e-4);
 
-    MPI_Scatter(global_X.data(),local_points * dimension,MPI_DOUBLE,local_flat.data(),local_points * dimension,MPI_DOUBLE,0,MPI_COMM_WORLD);
+    int total_files = 8;
+    for (int batch = 1; batch <= 10; batch++) {
+        // std::ostringstream batch_name;
+        // batch_name << "data/generated_batches/batch_" << std::setw(3)
+        //            << std::setfill('0') << batch << "/generated_rank_" <<
+        //            rank
+        //            << ".csv";
+        // std::string filename = batch_name.str();
+        // std::vector<std::vector<double>> local_X;
+        // local_X = readCSV(filename);
+        std::vector<std::vector<double>> local_X;
+        int files_per_rank = total_files / size;
+        int start_file = rank * files_per_rank;
+        int end_file = start_file + files_per_rank;
 
-    std::vector<std::vector<double>> local_X(
-        local_points,
-        std::vector<double>(dimension)
-    );
+        for (int r = start_file; r < end_file; r++) {
+            std::ostringstream batch_name;
+            batch_name << "data/generated_batches/batch_" << std::setw(3)
+                       << std::setfill('0') << batch << "/generated_rank_" << r
+                       << ".csv";
 
-    int index = 0;
-    for(int i = 0; i < local_points; i++)
-    {
-        for(int d = 0; d < dimension; d++)
-        {
-            local_X[i][d] = local_flat[index++];
+            std::string filename = batch_name.str();
+            auto temp = readCSV(filename);
+            local_X.insert(local_X.end(), temp.begin(), temp.end());
         }
+
+        if (local_X.empty()) {
+            std::cout << "Rank " << rank << " failed loading batch " << batch << std::endl;
+            continue;
+        }
+        // if(batch == 1 && rank == 0)
+        // {
+        //     global_mean = computeMean(local_X);
+        //     global_std = computeStd(local_X,global_mean);
+        // }
+
+        // int dim=8;
+        // if(rank!=0)
+        // {
+        //     global_mean.resize(dim);
+        //     global_std.resize(dim);
+        // }
+
+        // MPI_Bcast(global_mean.data(),dim,MPI_DOUBLE,0,MPI_COMM_WORLD);
+        // MPI_Bcast(global_std.data(),dim,MPI_DOUBLE,0,MPI_COMM_WORLD);
+
+        // normalize(local_X);
+        normalizeWithStats(local_X,global_mean,global_std);
+
+        std::cout << "Rank " << rank << " processing batch " << batch
+                  << " size " << local_X.size() << std::endl;
+        model.partial_fit(local_X);
+        local_X.clear();
     }
 
-    std::cout << "Rank "<< rank<< " received "<< local_X.size()<< " points\n";
 
-    MiniBatchKMeansMPI model(K,2,10,1e-4);
-
-    model.fit(local_X);
 
     if(rank==0)
     {
         model.print_centroids();
+        double end_time = MPI_Wtime();
+        std::cout << "Time: " << end_time - start_time << " seconds"
+                  << std::endl;
     }
 
     MPI_Finalize();

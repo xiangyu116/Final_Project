@@ -11,8 +11,7 @@ public:
 
     MiniBatchKMeansMPI(int K,int batch_size,int max_iter,double tol);
 
-
-    void fit(std::vector<std::vector<double>>& local_X);
+    void partial_fit(std::vector<std::vector<double>> &local_X);
 
     void print_centroids();
 
@@ -24,13 +23,11 @@ private:
     int max_iter;
     double tol;
 
+    bool initialized;
 
     std::vector<std::vector<double>> centroids;
-
-
-    double calculate_distance(const std::vector<double>& a,const std::vector<double>& b);
-
-
+    std::vector<int> update_count;
+    double calculate_distance(const std::vector<double> &a,const std::vector<double> &b);
     int find_closest_centroid(const std::vector<double>& point);
 
 };
